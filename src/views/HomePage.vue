@@ -150,17 +150,19 @@ import {
   notificationsOutline, starOutline,
   chevronForwardOutline, warningOutline,
 } from 'ionicons/icons'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Game, AIRecommendation } from '@/types'
 import { fetchPopularGames, fetchNewReleases } from '@/services/api.service'
 import { generateRecommendations } from '@/services/ai.service'
 import { useRatingsStore } from '@/stores/ratingsStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
+import { useUserStore } from '@/stores/userStore'
 
 const router = useRouter()
 const ratingsStore = useRatingsStore()
 const wishlistStore = useWishlistStore()
+const userStore = useUserStore()
 
 const popularGames = ref<Game[]>([])
 const newGames = ref<Game[]>([])
@@ -224,6 +226,9 @@ function scrollToReco() {
 }
 
 onMounted(loadData)
+watch(() => userStore.account?.account_id, (accountId) => {
+  if (accountId) void loadData()
+})
 </script>
 
 <style scoped>

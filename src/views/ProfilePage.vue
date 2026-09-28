@@ -4,6 +4,9 @@
       <ion-toolbar>
         <ion-title>👤 Profil</ion-title>
         <ion-buttons slot="end">
+          <ion-button id="btn-logout" fill="clear" @click="logout">
+            <ion-icon :icon="logOutOutline" />
+          </ion-button>
           <ion-button id="btn-edit-profile" @click="isEditing = !isEditing" fill="clear">
             <ion-icon :icon="isEditing ? closeOutline : createOutline" />
           </ion-button>
@@ -130,15 +133,17 @@ import {
 } from '@ionic/vue'
 import {
   createOutline, closeOutline, cameraOutline,
-  heartOutline, starOutline, trophyOutline, gameControllerOutline,
+  heartOutline, starOutline, trophyOutline, gameControllerOutline, logOutOutline,
 } from 'ionicons/icons'
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
 import { useRatingsStore } from '@/stores/ratingsStore'
 import { calculateGenreScores, getTopGenres } from '@/services/ai.service'
 
 const userStore = useUserStore()
+const router = useRouter()
 const wishlistStore = useWishlistStore()
 const ratingsStore = useRatingsStore()
 
@@ -178,10 +183,12 @@ async function saveProfile() {
   await toast.present()
 }
 
+async function logout() {
+  await userStore.logout()
+  await router.replace('/auth')
+}
+
 onMounted(async () => {
-  if (!userStore.profile) {
-    await userStore.createDefaultProfile()
-  }
   editUsername.value = userStore.profile?.username || ''
   editBio.value = userStore.profile?.bio || ''
 })

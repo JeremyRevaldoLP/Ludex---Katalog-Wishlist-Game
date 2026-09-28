@@ -59,6 +59,7 @@
 
 <script setup lang="ts">
 import {
+  onIonViewWillEnter,
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
   IonButtons, IonButton, IonIcon, IonList, IonItem,
   IonItemDivider, IonLabel, alertController, toastController,
@@ -67,7 +68,7 @@ import {
   timeOutline, trashOutline, eyeOutline, heartOutline,
   starOutline, heartDislikeOutline,
 } from 'ionicons/icons'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { HistoryItem } from '@/types'
 import { historyDB } from '@/services/database.service'
@@ -150,7 +151,7 @@ function openDetail(gameId: number) {
   router.push(`/game/${gameId}`)
 }
 
-onMounted(async () => {
+onIonViewWillEnter(async () => {
   history.value = await historyDB.getAll()
 })
 </script>

@@ -93,6 +93,7 @@ export interface GameFilters {
 
 export interface WishlistItem {
   id?: number
+  account_id: string
   game_id: number
   game_name: string
   game_image: string
@@ -103,6 +104,7 @@ export interface WishlistItem {
 
 export interface RatingItem {
   id?: number
+  account_id: string
   game_id: number
   game_name: string
   game_image: string
@@ -113,6 +115,7 @@ export interface RatingItem {
 
 export interface HistoryItem {
   id?: number
+  account_id: string
   game_id: number
   game_name: string
   game_image: string
@@ -123,10 +126,20 @@ export interface HistoryItem {
 
 export interface UserProfile {
   id?: number
+  account_id: string
   username: string
   avatar?: string
   favorite_genres: string[] // genre slugs
   bio: string
+  joined_at: string
+}
+
+export interface LocalAccount {
+  account_id: string
+  username: string
+  username_key: string
+  password_salt: string
+  password_hash: string
   joined_at: string
 }
 

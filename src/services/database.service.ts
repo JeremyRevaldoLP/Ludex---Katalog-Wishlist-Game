@@ -1,13 +1,14 @@
 // ============================================================
-// Database Service - IndexedDB (Browser/PWA) + Capacitor SQLite (Native)
-// Menggunakan IndexedDB sebagai fallback yang bekerja di semua platform
+// Local account and game data storage using IndexedDB.
 // ============================================================
-import type { WishlistItem, RatingItem, HistoryItem, UserProfile } from '@/types'
+import type { LocalAccount, WishlistItem, RatingItem, HistoryItem, UserProfile } from '@/types'
 
 const DB_NAME = 'ludex_db'
-const DB_VERSION = 1
+const DB_VERSION = 2
+const LEGACY_ACCOUNT_ID = '__legacy__'
 
 let db: IDBDatabase | null = null
+let activeAccountId: string | null = null
 
 // ===== Database Schema =====
 const STORES = {
@@ -15,7 +16,17 @@ const STORES = {
   RATINGS: 'ratings',
   HISTORY: 'history',
   PROFILE: 'profile',
+  ACCOUNTS: 'accounts',
 } as const
+
+export function setActiveAccountId(accountId: string | null): void {
+  activeAccountId = accountId
+}
+
+function requireActiveAccountId(): string {
+  if (!activeAccountId) throw new Error('[DB] A local account must be signed in')
+  return activeAccountId
+}
 
 // ============================================================
 // Inisialisasi Database
@@ -25,6 +36,7 @@ export async function initDatabase(): Promise<void> {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
 
     request.onerror = () => reject(request.error)
+    request.onblocked = () => reject(new Error('[DB] Close other Ludex tabs to update local storage'))
     request.onsuccess = () => {
       db = request.result
       console.log('[DB] Ludex database initialized ✅')
@@ -33,43 +45,54 @@ export async function initDatabase(): Promise<void> {
 
     request.onupgradeneeded = (event) => {
       const database = (event.target as IDBOpenDBRequest).result
+      const transaction = request.transaction!
+      const makeStore = (name: string, options: IDBObjectStoreParameters) =>
+        database.objectStoreNames.contains(name)
+          ? transaction.objectStore(name)
+          : database.createObjectStore(name, options)
 
-      // Store: Wishlist
-      if (!database.objectStoreNames.contains(STORES.WISHLIST)) {
-        const wishStore = database.createObjectStore(STORES.WISHLIST, {
-          keyPath: 'id',
-          autoIncrement: true,
-        })
-        wishStore.createIndex('game_id', 'game_id', { unique: true })
-        wishStore.createIndex('added_at', 'added_at', { unique: false })
+      const wishlist = makeStore(STORES.WISHLIST, { keyPath: 'id', autoIncrement: true })
+      if (wishlist.indexNames.contains('game_id')) wishlist.deleteIndex('game_id')
+      if (!wishlist.indexNames.contains('account_id')) wishlist.createIndex('account_id', 'account_id')
+      if (!wishlist.indexNames.contains('account_game')) {
+        wishlist.createIndex('account_game', ['account_id', 'game_id'], { unique: true })
+      }
+      if (!wishlist.indexNames.contains('added_at')) wishlist.createIndex('added_at', 'added_at')
+
+      const ratings = makeStore(STORES.RATINGS, { keyPath: 'id', autoIncrement: true })
+      if (ratings.indexNames.contains('game_id')) ratings.deleteIndex('game_id')
+      if (!ratings.indexNames.contains('account_id')) ratings.createIndex('account_id', 'account_id')
+      if (!ratings.indexNames.contains('account_game')) {
+        ratings.createIndex('account_game', ['account_id', 'game_id'], { unique: true })
+      }
+      if (!ratings.indexNames.contains('user_rating')) ratings.createIndex('user_rating', 'user_rating')
+
+      const history = makeStore(STORES.HISTORY, { keyPath: 'id', autoIncrement: true })
+      if (!history.indexNames.contains('account_id')) history.createIndex('account_id', 'account_id')
+      if (!history.indexNames.contains('timestamp')) history.createIndex('timestamp', 'timestamp')
+      if (!history.indexNames.contains('game_id')) history.createIndex('game_id', 'game_id')
+
+      const profiles = makeStore(STORES.PROFILE, { keyPath: 'id', autoIncrement: true })
+      if (!profiles.indexNames.contains('account_id')) {
+        profiles.createIndex('account_id', 'account_id', { unique: true })
       }
 
-      // Store: Ratings
-      if (!database.objectStoreNames.contains(STORES.RATINGS)) {
-        const ratingStore = database.createObjectStore(STORES.RATINGS, {
-          keyPath: 'id',
-          autoIncrement: true,
-        })
-        ratingStore.createIndex('game_id', 'game_id', { unique: true })
-        ratingStore.createIndex('user_rating', 'user_rating', { unique: false })
+      if (!database.objectStoreNames.contains(STORES.ACCOUNTS)) {
+        const accounts = database.createObjectStore(STORES.ACCOUNTS, { keyPath: 'account_id' })
+        accounts.createIndex('username_key', 'username_key', { unique: true })
       }
 
-      // Store: History
-      if (!database.objectStoreNames.contains(STORES.HISTORY)) {
-        const historyStore = database.createObjectStore(STORES.HISTORY, {
-          keyPath: 'id',
-          autoIncrement: true,
-        })
-        historyStore.createIndex('timestamp', 'timestamp', { unique: false })
-        historyStore.createIndex('game_id', 'game_id', { unique: false })
-      }
-
-      // Store: User Profile
-      if (!database.objectStoreNames.contains(STORES.PROFILE)) {
-        database.createObjectStore(STORES.PROFILE, {
-          keyPath: 'id',
-          autoIncrement: true,
-        })
+      if (event.oldVersion < 2) {
+        for (const name of [STORES.WISHLIST, STORES.RATINGS, STORES.HISTORY, STORES.PROFILE]) {
+          const store = transaction.objectStore(name)
+          const cursorRequest = store.openCursor()
+          cursorRequest.onsuccess = () => {
+            const cursor = cursorRequest.result
+            if (!cursor) return
+            if (!cursor.value.account_id) cursor.update({ ...cursor.value, account_id: LEGACY_ACCOUNT_ID })
+            cursor.continue()
+          }
+        }
       }
     }
   })
@@ -91,29 +114,113 @@ function promisify<T>(request: IDBRequest<T>): Promise<T> {
   })
 }
 
-function getAllFromStore<T>(storeName: string): Promise<T[]> {
+function getAllForActiveAccount<T>(storeName: string): Promise<T[]> {
   const store = getStore(storeName)
-  return promisify(store.getAll())
+  return promisify(store.index('account_id').getAll(requireActiveAccountId()))
+}
+
+function deleteActiveAccountRows(storeName: string): Promise<void> {
+  const store = getStore(storeName, 'readwrite')
+  const request = store.index('account_id').openCursor(IDBKeyRange.only(requireActiveAccountId()))
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => {
+      const cursor = request.result
+      if (cursor) {
+        cursor.delete()
+        cursor.continue()
+      } else {
+        resolve()
+      }
+    }
+    request.onerror = () => reject(request.error)
+  })
 }
 
 // ============================================================
+export const accountDB = {
+  getById(accountId: string): Promise<LocalAccount | undefined> {
+    return promisify(getStore(STORES.ACCOUNTS).get(accountId))
+  },
+
+  getByUsername(usernameKey: string): Promise<LocalAccount | undefined> {
+    return promisify(getStore(STORES.ACCOUNTS).index('username_key').get(usernameKey))
+  },
+
+  count(): Promise<number> {
+    return promisify(getStore(STORES.ACCOUNTS).count())
+  },
+
+  create(
+    account: LocalAccount,
+    profile: Omit<UserProfile, 'id' | 'account_id'>,
+    claimLegacyData: boolean
+  ): Promise<void> {
+    if (!db) return Promise.reject(new Error('[DB] Database not initialized!'))
+    const transaction = db.transaction(
+      [STORES.ACCOUNTS, STORES.WISHLIST, STORES.RATINGS, STORES.HISTORY, STORES.PROFILE],
+      'readwrite'
+    )
+    return new Promise((resolve, reject) => {
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+      transaction.onabort = () => reject(transaction.error || new Error('Account creation failed'))
+      transaction.objectStore(STORES.ACCOUNTS).add(account)
+
+      if (claimLegacyData) {
+        for (const name of [STORES.WISHLIST, STORES.RATINGS, STORES.HISTORY]) {
+          const store = transaction.objectStore(name)
+          const request = store.index('account_id').openCursor(IDBKeyRange.only(LEGACY_ACCOUNT_ID))
+          request.onsuccess = () => {
+            const cursor = request.result
+            if (!cursor) return
+            cursor.update({ ...cursor.value, account_id: account.account_id })
+            cursor.continue()
+          }
+        }
+      }
+
+      const profiles = transaction.objectStore(STORES.PROFILE)
+      const request = profiles.openCursor()
+      let profileFound = false
+      request.onsuccess = () => {
+        const cursor = request.result
+        if (!cursor) {
+          if (!profileFound) profiles.add({ ...profile, account_id: account.account_id })
+          return
+        }
+        const isCurrent = cursor.value.account_id === account.account_id
+        const isLegacy = claimLegacyData && cursor.value.account_id === LEGACY_ACCOUNT_ID
+        if (isCurrent || isLegacy) {
+          profileFound = true
+          cursor.update({ ...profile, ...cursor.value, account_id: account.account_id, username: profile.username })
+        }
+        cursor.continue()
+      }
+    })
+  },
+}
+
 // Wishlist Operations
 // ============================================================
 export const wishlistDB = {
   async getAll(): Promise<WishlistItem[]> {
-    return getAllFromStore<WishlistItem>(STORES.WISHLIST)
+    return getAllForActiveAccount<WishlistItem>(STORES.WISHLIST)
   },
 
-  async add(item: Omit<WishlistItem, 'id'>): Promise<number> {
+  async add(item: Omit<WishlistItem, 'id' | 'account_id'>): Promise<number> {
     const store = getStore(STORES.WISHLIST, 'readwrite')
-    const id = await promisify(store.add({ ...item, added_at: new Date().toISOString() }))
+    const id = await promisify(store.add({
+      ...item,
+      account_id: requireActiveAccountId(),
+      added_at: new Date().toISOString(),
+    }))
     return id as number
   },
 
   async remove(gameId: number): Promise<void> {
     const store = getStore(STORES.WISHLIST, 'readwrite')
-    const index = store.index('game_id')
-    const key = await promisify(index.getKey(gameId))
+    const index = store.index('account_game')
+    const key = await promisify(index.getKey([requireActiveAccountId(), gameId]))
     if (key !== undefined) {
       await promisify(store.delete(key))
     }
@@ -121,8 +228,8 @@ export const wishlistDB = {
 
   async isWishlisted(gameId: number): Promise<boolean> {
     const store = getStore(STORES.WISHLIST)
-    const index = store.index('game_id')
-    const result = await promisify(index.get(gameId))
+    const index = store.index('account_game')
+    const result = await promisify(index.get([requireActiveAccountId(), gameId]))
     return result !== undefined
   },
 }
@@ -132,31 +239,32 @@ export const wishlistDB = {
 // ============================================================
 export const ratingsDB = {
   async getAll(): Promise<RatingItem[]> {
-    return getAllFromStore<RatingItem>(STORES.RATINGS)
+    return getAllForActiveAccount<RatingItem>(STORES.RATINGS)
   },
 
   async getByGameId(gameId: number): Promise<RatingItem | undefined> {
     const store = getStore(STORES.RATINGS)
-    const index = store.index('game_id')
-    return promisify(index.get(gameId))
+    const index = store.index('account_game')
+    return promisify(index.get([requireActiveAccountId(), gameId]))
   },
 
-  async save(item: Omit<RatingItem, 'id'>): Promise<void> {
+  async save(item: Omit<RatingItem, 'id' | 'account_id'>): Promise<void> {
     const store = getStore(STORES.RATINGS, 'readwrite')
-    const index = store.index('game_id')
-    const existing = await promisify(index.get(item.game_id))
+    const accountId = requireActiveAccountId()
+    const index = store.index('account_game')
+    const existing = await promisify(index.get([accountId, item.game_id]))
 
     if (existing) {
       await promisify(store.put({ ...existing, ...item, rated_at: new Date().toISOString() }))
     } else {
-      await promisify(store.add({ ...item, rated_at: new Date().toISOString() }))
+      await promisify(store.add({ ...item, account_id: accountId, rated_at: new Date().toISOString() }))
     }
   },
 
   async delete(gameId: number): Promise<void> {
     const store = getStore(STORES.RATINGS, 'readwrite')
-    const index = store.index('game_id')
-    const key = await promisify(index.getKey(gameId))
+    const index = store.index('account_game')
+    const key = await promisify(index.getKey([requireActiveAccountId(), gameId]))
     if (key !== undefined) {
       await promisify(store.delete(key))
     }
@@ -168,18 +276,21 @@ export const ratingsDB = {
 // ============================================================
 export const historyDB = {
   async getAll(): Promise<HistoryItem[]> {
-    const items = await getAllFromStore<HistoryItem>(STORES.HISTORY)
+    const items = await getAllForActiveAccount<HistoryItem>(STORES.HISTORY)
     return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
   },
 
-  async add(item: Omit<HistoryItem, 'id'>): Promise<void> {
+  async add(item: Omit<HistoryItem, 'id' | 'account_id'>): Promise<void> {
     const store = getStore(STORES.HISTORY, 'readwrite')
-    await promisify(store.add({ ...item, timestamp: new Date().toISOString() }))
+    await promisify(store.add({
+      ...item,
+      account_id: requireActiveAccountId(),
+      timestamp: new Date().toISOString(),
+    }))
   },
 
   async clear(): Promise<void> {
-    const store = getStore(STORES.HISTORY, 'readwrite')
-    await promisify(store.clear())
+    await deleteActiveAccountRows(STORES.HISTORY)
   },
 }
 
@@ -188,19 +299,22 @@ export const historyDB = {
 // ============================================================
 export const profileDB = {
   async get(): Promise<UserProfile | null> {
-    const all = await getAllFromStore<UserProfile>(STORES.PROFILE)
-    return all.length > 0 ? all[0] : null
+    const store = getStore(STORES.PROFILE)
+    const profile = await promisify(store.index('account_id').get(requireActiveAccountId()))
+    return profile || null
   },
 
   async save(profile: Partial<UserProfile>): Promise<void> {
     const store = getStore(STORES.PROFILE, 'readwrite')
+    const accountId = requireActiveAccountId()
     const existing = await this.get()
     if (existing) {
-      await promisify(store.put({ ...existing, ...profile }))
+      await promisify(store.put({ ...existing, ...profile, account_id: accountId }))
     } else {
       await promisify(
         store.add({
           ...profile,
+          account_id: accountId,
           joined_at: new Date().toISOString(),
         })
       )

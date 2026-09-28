@@ -7,7 +7,7 @@
 | Teknologi | Keterangan |
 |-----------|-----------|
 | Vue 3 | Composition API + `<script setup>` |
-| Ionic Framework | UI Components (mode Material Design) |
+| Ionic Framework | UI Components (mode Material Design) | 
 | Vite | Build tool & dev server |
 | IndexedDB | Local storage (browser & Capacitor) |
 | RAWG API | Public Game Database API |

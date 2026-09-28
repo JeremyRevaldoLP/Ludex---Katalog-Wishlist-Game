@@ -29,7 +29,7 @@ export const useWishlistStore = defineStore('wishlist', () => {
   async function addToWishlist(game: Game) {
     if (isWishlisted(game.id)) return
 
-    const item: Omit<WishlistItem, 'id'> = {
+    const item: Omit<WishlistItem, 'id' | 'account_id'> = {
       game_id: game.id,
       game_name: game.name,
       game_image: game.background_image || '',

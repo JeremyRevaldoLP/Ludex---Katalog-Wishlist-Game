@@ -37,7 +37,7 @@ export const useRatingsStore = defineStore('ratings', () => {
     userNote: string,
     genres: string[] = []
   ) {
-    const item: Omit<RatingItem, 'id'> = {
+    const item: Omit<RatingItem, 'id' | 'account_id'> = {
       game_id: gameId,
       game_name: gameName,
       game_image: gameImage,
