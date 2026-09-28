@@ -1,0 +1,7 @@
+{
+  "name": "ludex",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite"
+}
