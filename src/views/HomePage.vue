@@ -87,7 +87,11 @@
             class="game-card compact-card"
             @click="openDetail(game.id)"
           >
-            <img :src="game.background_image || '/placeholder.png'" :alt="game.name" loading="lazy" />
+            <img
+              :src="game.background_image || game.short_screenshots?.[0]?.image || '/placeholder.png'"
+              :alt="game.name"
+              loading="lazy"
+            />
             <div class="game-card-info">
               <p class="game-card-title">{{ game.name }}</p>
               <div class="game-card-meta">
