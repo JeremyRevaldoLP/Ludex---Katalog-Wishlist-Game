@@ -10,6 +10,16 @@
     </ion-header>
 
     <ion-content class="ion-padding">
+      <ApiErrorNotice
+        v-if="requestFailed"
+        :failed="requestFailed"
+        :loading="loadingGame"
+        @retry="loadGame"
+      />
+      <div v-else-if="loadingGame" class="rating-loading">
+        <ion-spinner name="crescent" />
+      </div>
+      <template v-else-if="game">
       <!-- Game Info Card -->
       <div class="rating-game-card" v-if="game">
         <img :src="game.background_image || ''" :alt="game.name" />
@@ -82,6 +92,7 @@
         <ion-icon :icon="trashOutline" slot="start" />
         Hapus Rating
       </ion-button>
+      </template>
     </ion-content>
   </ion-page>
 </template>
@@ -90,7 +101,7 @@
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
   IonButtons, IonBackButton, IonButton, IonIcon,
-  IonItem, IonLabel, IonTextarea,
+  IonItem, IonLabel, IonTextarea, IonSpinner,
   toastController,
 } from '@ionic/vue'
 import { checkmarkCircleOutline, trashOutline } from 'ionicons/icons'
@@ -99,6 +110,7 @@ import { useRoute, useRouter } from 'vue-router'
 import type { Game } from '@/types'
 import { fetchGameDetail } from '@/services/api.service'
 import { useRatingsStore } from '@/stores/ratingsStore'
+import ApiErrorNotice from '@/components/ApiErrorNotice.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -106,6 +118,8 @@ const ratingsStore = useRatingsStore()
 
 const gameId = computed(() => Number(route.params.id))
 const game = ref<Game | null>(null)
+const loadingGame = ref(true)
+const requestFailed = ref(false)
 const selectedRating = ref(0)
 const hoverRating = ref(0)
 const userNote = ref('')
@@ -151,15 +165,25 @@ async function deleteRating() {
   router.back()
 }
 
-onMounted(async () => {
-  game.value = await fetchGameDetail(gameId.value)
-  // Pre-fill jika sudah pernah rating
-  const existing = existingRating.value
-  if (existing) {
-    selectedRating.value = existing.user_rating
-    userNote.value = existing.user_note
+async function loadGame() {
+  loadingGame.value = true
+  requestFailed.value = false
+  try {
+    game.value = await fetchGameDetail(gameId.value)
+    const existing = existingRating.value
+    if (existing) {
+      selectedRating.value = existing.user_rating
+      userNote.value = existing.user_note
+    }
+  } catch {
+    game.value = null
+    requestFailed.value = true
+  } finally {
+    loadingGame.value = false
   }
-})
+}
+
+onMounted(loadGame)
 </script>
 
 <style scoped>
@@ -173,6 +197,7 @@ onMounted(async () => {
   padding: 12px;
   margin-bottom: 24px;
 }
+.rating-loading { display: flex; justify-content: center; padding: 48px 0; }
 .rating-game-card img {
   width: 72px;
   height: 72px;

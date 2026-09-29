@@ -133,11 +133,7 @@
       </div>
 
       <!-- Error -->
-      <div v-else class="gs-empty">
-        <ion-icon :icon="alertCircleOutline" class="gs-empty-icon" />
-        <h3 class="gs-empty-title">Gagal memuat</h3>
-        <ion-button fill="outline" @click="loadDetail">Coba lagi</ion-button>
-      </div>
+      <ApiErrorNotice v-else :failed="requestFailed" :loading="loading" @retry="loadDetail" />
     </ion-content>
 
     <!-- FAB: Rate Game -->
@@ -166,6 +162,7 @@ import { fetchGameDetail } from '@/services/api.service'
 import { historyDB } from '@/services/database.service'
 import { useWishlistStore } from '@/stores/wishlistStore'
 import { useRatingsStore } from '@/stores/ratingsStore'
+import ApiErrorNotice from '@/components/ApiErrorNotice.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -175,6 +172,7 @@ const ratingsStore = useRatingsStore()
 const gameId = computed(() => Number(route.params.id))
 const game = ref<Game | null>(null)
 const loading = ref(true)
+const requestFailed = ref(false)
 const descExpanded = ref(false)
 
 const wishlisted = computed(() => wishlistStore.isWishlisted(gameId.value))
@@ -189,17 +187,24 @@ const metacriticColor = computed(() => {
 
 async function loadDetail() {
   loading.value = true
+  requestFailed.value = false
   try {
     game.value = await fetchGameDetail(gameId.value)
-    // Catat ke history
-    await historyDB.add({
-      game_id: gameId.value,
-      game_name: game.value.name,
-      game_image: game.value.background_image || '',
-      action: 'viewed',
-      action_detail: 'Dilihat',
-      timestamp: new Date().toISOString(),
-    })
+    try {
+      await historyDB.add({
+        game_id: gameId.value,
+        game_name: game.value.name,
+        game_image: game.value.background_image || '',
+        action: 'viewed',
+        action_detail: 'Dilihat',
+        timestamp: new Date().toISOString(),
+      })
+    } catch (error) {
+      console.warn('[History] Gagal mencatat game:', error)
+    }
+  } catch {
+    game.value = null
+    requestFailed.value = true
   } finally {
     loading.value = false
   }

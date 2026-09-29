@@ -18,6 +18,11 @@
           <p>Buat file <code>.env.local</code> dan isi <code>VITE_RAWG_API_KEY</code></p>
         </div>
       </div>
+      <ApiErrorNotice
+        :failed="requestFailed"
+        :loading="loadingPopular || loadingNew"
+        @retry="loadData"
+      />
       <!-- Pull to Refresh -->
       <ion-refresher slot="fixed" @ionRefresh="handleRefresh($event)">
         <ion-refresher-content />
@@ -158,6 +163,7 @@ import { generateRecommendations } from '@/services/ai.service'
 import { useRatingsStore } from '@/stores/ratingsStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
 import { useUserStore } from '@/stores/userStore'
+import ApiErrorNotice from '@/components/ApiErrorNotice.vue'
 
 const router = useRouter()
 const ratingsStore = useRatingsStore()
@@ -170,9 +176,11 @@ const aiReco = ref<AIRecommendation | null>(null)
 const loadingPopular = ref(true)
 const loadingNew = ref(true)
 const apiKeyMissing = ref(false)
+const requestFailed = ref(false)
 const recoSection = ref<HTMLElement | null>(null)
 
 async function loadData() {
+  requestFailed.value = false
   // Cek apakah API key sudah diset
   const apiKey = import.meta.env.VITE_RAWG_API_KEY
   if (!apiKey || apiKey === 'YOUR_API_KEY_HERE' || apiKey === 'your_rawg_api_key_here') {
@@ -192,6 +200,7 @@ async function loadData() {
     ])
     if (popular.status === 'fulfilled') popularGames.value = popular.value
     if (newReleases.status === 'fulfilled') newGames.value = newReleases.value
+    requestFailed.value = popular.status === 'rejected' || newReleases.status === 'rejected'
   } finally {
     loadingPopular.value = false
     loadingNew.value = false

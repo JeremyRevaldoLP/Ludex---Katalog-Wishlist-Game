@@ -35,6 +35,11 @@
     </ion-header>
 
     <ion-content>
+      <ApiErrorNotice
+        :failed="requestFailed"
+        :loading="loading"
+        @retry="retryRequest"
+      />
       <!-- Loading Spinner -->
       <div v-if="loading" class="loading-state">
         <ion-spinner name="crescent" color="primary" />
@@ -114,6 +119,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { Game, Genre } from '@/types'
 import { searchGames, fetchGenres } from '@/services/api.service'
+import ApiErrorNotice from '@/components/ApiErrorNotice.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -123,6 +129,8 @@ const selectedGenre = ref<string | null>(null)
 const games = ref<Game[]>([])
 const genres = ref<Genre[]>([])
 const loading = ref(false)
+const requestFailed = ref(false)
+const failedRequest = ref<'genres' | 'search'>('search')
 const totalCount = ref(0)
 const currentPage = ref(1)
 
@@ -130,9 +138,12 @@ async function onSearch() {
   if (!searchQuery.value && !selectedGenre.value) {
     games.value = []
     totalCount.value = 0
+    requestFailed.value = false
     return
   }
   loading.value = true
+  requestFailed.value = false
+  failedRequest.value = 'search'
   currentPage.value = 1
   try {
     const result = await searchGames(
@@ -142,6 +153,8 @@ async function onSearch() {
     )
     games.value = result.results
     totalCount.value = result.count
+  } catch {
+    requestFailed.value = true
   } finally {
     loading.value = false
   }
@@ -154,22 +167,46 @@ async function selectGenre(slug: string | null) {
 
 async function loadMore(event: CustomEvent) {
   currentPage.value++
-  const result = await searchGames(
-    searchQuery.value,
-    selectedGenre.value || undefined,
-    currentPage.value
-  )
-  games.value.push(...result.results)
-  ;(event.target as any).complete()
+  try {
+    const result = await searchGames(
+      searchQuery.value,
+      selectedGenre.value || undefined,
+      currentPage.value
+    )
+    games.value.push(...result.results)
+    requestFailed.value = false
+  } catch {
+    currentPage.value--
+    failedRequest.value = 'search'
+    requestFailed.value = true
+  } finally {
+    ;(event.target as any).complete()
+  }
+}
+
+async function loadGenres() {
+  try {
+    genres.value = await fetchGenres()
+    requestFailed.value = false
+  } catch {
+    failedRequest.value = 'genres'
+    requestFailed.value = true
+  }
+}
+
+async function retryRequest() {
+  if (failedRequest.value === 'genres') {
+    await loadGenres()
+  } else {
+    await onSearch()
+  }
 }
 
 function openDetail(id: number) {
   router.push(`/game/${id}`)
 }
 
-onMounted(async () => {
-  genres.value = await fetchGenres()
-})
+onMounted(loadGenres)
 </script>
 
 <style scoped>
