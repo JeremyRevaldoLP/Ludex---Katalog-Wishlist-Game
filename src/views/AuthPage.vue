@@ -2,7 +2,9 @@
   <ion-page>
     <ion-content class="auth-content">
       <main class="auth-shell">
-        <div class="brand-mark">L</div>
+        <div class="brand-mark">
+          <img src="/placeholdersquare.png" alt="Ludex" />
+        </div>
         <p class="eyebrow">LUDEX GAME LIBRARY</p>
         <h1>{{ mode === 'login' ? 'Selamat datang kembali' : 'Buat akun lokal' }}</h1>
         <p class="subtitle">Profil dan aktivitas game tersimpan di perangkat ini.</p>
@@ -135,4 +137,11 @@ ion-input {
 .submit-button { margin: 8px 0 0; }
 .error-message { margin: 0; color: var(--gs-danger); font-size: 0.9rem; }
 .local-note { margin-top: 24px; color: var(--gs-text-muted); font-size: 0.78rem; line-height: 1.5; }
+
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
+}
 </style>

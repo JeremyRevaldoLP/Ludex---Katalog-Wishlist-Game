@@ -60,6 +60,8 @@
 
   --ion-border-color: var(--gs-border);
 
+  --ion-font-family: var(--gs-font);
+
   /* ===== Spacing ===== */
   --gs-radius-sm: 8px;
   --gs-radius-md: 14px;
