@@ -129,6 +129,25 @@
               Rating Anda: {{ userRating.user_rating }}/5
             </p>
           </div>
+
+          <section class="community-reviews">
+            <div class="reviews-heading">
+              <h2>Ulasan Pengguna</h2>
+              <span>{{ communityReviews.length }}</span>
+            </div>
+            <p v-if="communityReviews.length === 0" class="reviews-empty">Belum ada pengguna yang memberi rating game ini.</p>
+            <article v-for="review in communityReviews" :key="review.id" class="community-review">
+              <div class="review-heading">
+                <strong>{{ review.username }}</strong>
+                <span>{{ review.user_rating }}/5</span>
+              </div>
+              <div class="gs-stars">
+                <span v-for="n in 5" :key="n" class="gs-star" :class="{ active: n <= review.user_rating }">★</span>
+              </div>
+              <p v-if="review.user_note" class="review-note">{{ review.user_note }}</p>
+              <time>{{ new Date(review.rated_at).toLocaleDateString('id-ID') }}</time>
+            </article>
+          </section>
         </div>
       </div>
 
@@ -153,13 +172,13 @@ import {
 } from '@ionic/vue'
 import {
   heartOutline, heart, starOutline, starHalfOutline,
-  timeOutline, alertCircleOutline,
+  timeOutline,
 } from 'ionicons/icons'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { Game } from '@/types'
 import { fetchGameDetail } from '@/services/api.service'
-import { historyDB } from '@/services/database.service'
+import { communityDB, historyDB } from '@/services/database.service'
 import { useWishlistStore } from '@/stores/wishlistStore'
 import { useRatingsStore } from '@/stores/ratingsStore'
 import ApiErrorNotice from '@/components/ApiErrorNotice.vue'
@@ -174,6 +193,7 @@ const game = ref<Game | null>(null)
 const loading = ref(true)
 const requestFailed = ref(false)
 const descExpanded = ref(false)
+const communityReviews = ref<Awaited<ReturnType<typeof communityDB.getRatingsForGame>>>([])
 
 const wishlisted = computed(() => wishlistStore.isWishlisted(gameId.value))
 const userRating = computed(() => ratingsStore.getRating(gameId.value))
@@ -190,6 +210,11 @@ async function loadDetail() {
   requestFailed.value = false
   try {
     game.value = await fetchGameDetail(gameId.value)
+    try {
+      communityReviews.value = await communityDB.getRatingsForGame(gameId.value)
+    } catch (error) {
+      console.warn('[Community] Gagal memuat ulasan:', error)
+    }
     try {
       await historyDB.add({
         game_id: gameId.value,
@@ -346,4 +371,25 @@ onMounted(loadDetail)
   padding: 14px 16px;
   margin-top: 8px;
 }
+
+.community-reviews { margin-top: 24px; }
+.reviews-heading, .review-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.reviews-heading { margin-bottom: 12px; }
+.reviews-heading h2 { margin: 0; color: var(--gs-text-primary); font-size: 1.1rem; }
+.reviews-heading > span, .review-heading > span { color: var(--gs-accent); font-size: 0.85rem; font-weight: 700; }
+.reviews-empty { color: var(--gs-text-muted); font-size: 0.85rem; }
+.community-review {
+  padding: 14px 0;
+  border-top: 1px solid var(--gs-border);
+}
+.review-heading strong { color: var(--gs-text-primary); }
+.community-review .gs-stars { margin-top: 4px; }
+.community-review .gs-star { font-size: 1rem; }
+.review-note { margin: 8px 0; color: var(--gs-text-secondary); line-height: 1.5; white-space: pre-wrap; }
+.community-review time { color: var(--gs-text-muted); font-size: 0.72rem; }
 </style>

@@ -72,6 +72,28 @@
         </div>
       </div>
 
+      <section class="community-directory">
+        <div class="gs-section-header">
+          <h2 class="gs-section-title">Pengguna Lain</h2>
+        </div>
+        <button
+          v-for="profile in otherProfiles"
+          :key="profile.account_id"
+          class="community-user"
+          @click="openCommunityProfile(profile.account_id)"
+        >
+          <span class="community-avatar">{{ profile.username[0]?.toUpperCase() || 'G' }}</span>
+          <span class="community-user-info">
+            <strong>{{ profile.username }}</strong>
+            <small>{{ profile.bio || 'Belum ada bio' }}</small>
+          </span>
+          <ion-icon :icon="chevronForwardOutline" />
+        </button>
+        <p v-if="otherProfiles.length === 0" class="community-empty">
+          Belum ada profil pengguna lain di perangkat ini.
+        </p>
+      </section>
+
       <!-- Rated Games Section -->
       <div v-if="ratingsStore.items.length > 0">
         <div class="gs-section-header">
@@ -133,14 +155,17 @@ import {
 } from '@ionic/vue'
 import {
   createOutline, closeOutline, cameraOutline,
-  heartOutline, starOutline, trophyOutline, gameControllerOutline, logOutOutline,
+  heartOutline, starOutline, trophyOutline, gameControllerOutline, logOutOutline, chevronForwardOutline,
 } from 'ionicons/icons'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { onIonViewWillEnter } from '@ionic/vue'
 import { useUserStore } from '@/stores/userStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
 import { useRatingsStore } from '@/stores/ratingsStore'
 import { calculateGenreScores, getTopGenres } from '@/services/ai.service'
+import { communityDB } from '@/services/database.service'
+import type { UserProfile } from '@/types'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -150,6 +175,10 @@ const ratingsStore = useRatingsStore()
 const isEditing = ref(false)
 const editUsername = ref('')
 const editBio = ref('')
+const allProfiles = ref<UserProfile[]>([])
+const otherProfiles = computed(() => allProfiles.value.filter(
+  (profile) => profile.account_id !== userStore.account?.account_id
+))
 
 const avatarLetter = computed(() =>
   (userStore.profile?.username || 'G')[0].toUpperCase()
@@ -188,10 +217,20 @@ async function logout() {
   await router.replace('/auth')
 }
 
+function openCommunityProfile(accountId: string) {
+  router.push({ name: 'CommunityProfile', params: { accountId } })
+}
+
+async function loadCommunityProfiles() {
+  allProfiles.value = await communityDB.getProfiles()
+}
+
 onMounted(async () => {
   editUsername.value = userStore.profile?.username || ''
   editBio.value = userStore.profile?.bio || ''
 })
+
+onIonViewWillEnter(loadCommunityProfiles)
 </script>
 
 <style scoped>
@@ -319,6 +358,38 @@ onMounted(async () => {
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
+
+.community-directory { padding-bottom: 20px; }
+.community-user {
+  width: calc(100% - 32px);
+  min-height: 64px;
+  margin: 0 16px 8px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--gs-border);
+  border-radius: 8px;
+  background: var(--gs-bg-card);
+  color: var(--gs-text-secondary);
+  text-align: left;
+}
+.community-avatar {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gs-bg-elevated);
+  color: var(--gs-primary-light);
+  font-weight: 700;
+}
+.community-user-info { min-width: 0; flex: 1; display: grid; gap: 3px; }
+.community-user-info strong { color: var(--gs-text-primary); }
+.community-user-info small { overflow: hidden; color: var(--gs-text-muted); text-overflow: ellipsis; white-space: nowrap; }
+.community-user ion-icon { flex: 0 0 auto; }
+.community-empty { margin: 0 16px; color: var(--gs-text-muted); font-size: 0.85rem; }
 
 .rated-list {
   padding: 0 16px;

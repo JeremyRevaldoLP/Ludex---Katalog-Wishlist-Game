@@ -60,6 +60,12 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/views/RatingPage.vue'),
     meta: { title: 'Beri Rating', requiresAuth: true },
   },
+  {
+    path: '/users/:accountId',
+    name: 'CommunityProfile',
+    component: () => import('@/views/CommunityProfilePage.vue'),
+    meta: { title: 'Profil Pengguna', requiresAuth: true },
+  },
 ]
 
 const router = createRouter({

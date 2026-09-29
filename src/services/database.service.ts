@@ -321,3 +321,35 @@ export const profileDB = {
     }
   },
 }
+
+// Read-only data shared between local accounts on this installation.
+export const communityDB = {
+  async getProfiles(): Promise<UserProfile[]> {
+    return promisify(getStore(STORES.PROFILE).getAll())
+  },
+
+  async getProfile(accountId: string): Promise<UserProfile | undefined> {
+    return promisify(getStore(STORES.PROFILE).index('account_id').get(accountId))
+  },
+
+  async getRatingsForGame(gameId: number): Promise<Array<RatingItem & { username: string }>> {
+    const [ratings, profiles] = await Promise.all([
+      promisify(getStore(STORES.RATINGS).getAll()),
+      this.getProfiles(),
+    ])
+    const usernames = new Map(profiles.map((profile) => [profile.account_id, profile.username]))
+
+    return ratings
+      .filter((rating) => rating.game_id === gameId)
+      .map((rating) => ({ ...rating, username: usernames.get(rating.account_id) || 'Pengguna' }))
+      .sort((a, b) => new Date(b.rated_at).getTime() - new Date(a.rated_at).getTime())
+  },
+
+  async getRatingsForAccount(accountId: string): Promise<RatingItem[]> {
+    return promisify(getStore(STORES.RATINGS).index('account_id').getAll(accountId))
+  },
+
+  async getWishlistForAccount(accountId: string): Promise<WishlistItem[]> {
+    return promisify(getStore(STORES.WISHLIST).index('account_id').getAll(accountId))
+  },
+}
