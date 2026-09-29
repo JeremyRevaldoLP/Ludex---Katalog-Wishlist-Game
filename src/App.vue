@@ -2,7 +2,7 @@
   <ion-app>
     <ion-router-outlet />
     <div v-if="!isOnline" class="offline-notice" role="status" aria-live="polite">
-      Connect to the internet to access the game library.
+      Hubungkan ke internet untuk mengakses perpustakaan game.
     </div>
   </ion-app>
 </template>

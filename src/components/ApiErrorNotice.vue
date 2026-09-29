@@ -1,11 +1,11 @@
 <template>
   <section v-if="failed && isOnline" class="api-error-notice" role="alert">
     <div>
-      <strong>Game library couldn't load</strong>
-      <p>Check your internet connection, RAWG API key, or request limit, then try again.</p>
+      <strong>Library game tidak dapat dimuat</strong>
+      <p>Periksa koneksi internet, kunci API RAWG, atau batas permintaan, lalu coba lagi.</p>
     </div>
     <ion-button fill="outline" size="small" :disabled="loading" @click="$emit('retry')">
-      {{ loading ? 'Loading...' : 'Retry' }}
+      {{ loading ? 'Memuat...' : 'Coba lagi' }}
     </ion-button>
   </section>
 </template>
