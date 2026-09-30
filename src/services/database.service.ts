@@ -150,6 +150,31 @@ export const accountDB = {
     return promisify(getStore(STORES.ACCOUNTS).count())
   },
 
+  delete(accountId: string): Promise<void> {
+    if (!db) return Promise.reject(new Error('[DB] Database not initialized!'))
+    const transaction = db.transaction(
+      [STORES.ACCOUNTS, STORES.WISHLIST, STORES.RATINGS, STORES.HISTORY, STORES.PROFILE],
+      'readwrite'
+    )
+    return new Promise((resolve, reject) => {
+      transaction.oncomplete = () => resolve()
+      transaction.onerror = () => reject(transaction.error)
+      transaction.onabort = () => reject(transaction.error || new Error('Account deletion failed'))
+
+      transaction.objectStore(STORES.ACCOUNTS).delete(accountId)
+      for (const name of [STORES.WISHLIST, STORES.RATINGS, STORES.HISTORY, STORES.PROFILE]) {
+        const store = transaction.objectStore(name)
+        const request = store.index('account_id').openCursor(IDBKeyRange.only(accountId))
+        request.onsuccess = () => {
+          const cursor = request.result
+          if (!cursor) return
+          cursor.delete()
+          cursor.continue()
+        }
+      }
+    })
+  },
+
   create(
     account: LocalAccount,
     profile: Omit<UserProfile, 'id' | 'account_id'>,

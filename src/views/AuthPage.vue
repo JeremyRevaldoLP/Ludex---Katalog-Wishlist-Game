@@ -46,6 +46,7 @@
           </ion-button>
         </form>
         <p class="local-note">Akun demo disimpan hanya di instalasi aplikasi ini dan tidak dapat dibagikan antarperangkat.</p>
+        <p class="privacy-link"><a href="/privacy-policy.html" target="_blank" rel="noreferrer">Kebijakan Privasi</a></p>
       </main>
     </ion-content>
   </ion-page>
@@ -137,6 +138,8 @@ ion-input {
 .submit-button { margin: 8px 0 0; }
 .error-message { margin: 0; color: var(--gs-danger); font-size: 0.9rem; }
 .local-note { margin-top: 24px; color: var(--gs-text-muted); font-size: 0.78rem; line-height: 1.5; }
+.privacy-link { margin-top: 12px; font-size: 0.85rem; }
+.privacy-link a { color: var(--gs-primary-light); }
 
 .brand-mark img {
   width: 100%;

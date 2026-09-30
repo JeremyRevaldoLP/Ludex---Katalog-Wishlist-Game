@@ -72,6 +72,15 @@
         </div>
       </div>
 
+      <div class="account-actions">
+        <ion-button fill="clear" class="privacy-link" href="/privacy-policy.html" target="_blank" rel="noreferrer">
+          Kebijakan Privasi
+        </ion-button>
+        <ion-button expand="block" fill="outline" color="danger" @click="confirmDeleteAccount">
+          Hapus Akun dan Data
+        </ion-button>
+      </div>
+
       <section class="community-directory">
         <div class="gs-section-header">
           <h2 class="gs-section-title">Pengguna Lain</h2>
@@ -151,7 +160,7 @@
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
   IonButtons, IonButton, IonIcon, IonItem, IonLabel,
-  IonInput, IonTextarea, IonBadge, toastController,
+  IonInput, IonTextarea, IonBadge, toastController, alertController,
 } from '@ionic/vue'
 import {
   createOutline, closeOutline, cameraOutline,
@@ -215,6 +224,35 @@ async function saveProfile() {
 async function logout() {
   await userStore.logout()
   await router.replace('/auth')
+}
+
+async function confirmDeleteAccount() {
+  const alert = await alertController.create({
+    header: 'Hapus akun dan semua data?',
+    message: 'Profil, ulasan, rating, wishlist, dan riwayat akun ini akan dihapus dari perangkat ini. Tindakan ini tidak dapat dibatalkan.',
+    buttons: [
+      { text: 'Batal', role: 'cancel' },
+      {
+        text: 'Hapus Akun',
+        role: 'destructive',
+        handler: async () => {
+          try {
+            await userStore.deleteAccount()
+            await router.replace('/auth')
+          } catch {
+            const toast = await toastController.create({
+              message: 'Akun gagal dihapus. Coba lagi.',
+              duration: 2000,
+              position: 'bottom',
+              color: 'danger',
+            })
+            await toast.present()
+          }
+        },
+      },
+    ],
+  })
+  await alert.present()
 }
 
 function openCommunityProfile(accountId: string) {
@@ -390,6 +428,8 @@ onIonViewWillEnter(loadCommunityProfiles)
 .community-user-info small { overflow: hidden; color: var(--gs-text-muted); text-overflow: ellipsis; white-space: nowrap; }
 .community-user ion-icon { flex: 0 0 auto; }
 .community-empty { margin: 0 16px; color: var(--gs-text-muted); font-size: 0.85rem; }
+.account-actions { padding: 0 16px 24px; }
+.privacy-link { margin: 0 0 8px; }
 
 .rated-list {
   padding: 0 16px;

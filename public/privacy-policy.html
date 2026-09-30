@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Kebijakan privasi aplikasi Ludex.">
+  <title>Kebijakan Privasi - Ludex</title>
+  <style>
+    :root { color-scheme: light; font-family: Arial, sans-serif; color: #17202a; background: #f5f7fa; }
+    body { margin: 0; line-height: 1.65; }
+    main { max-width: 760px; margin: 0 auto; padding: 40px 22px 64px; background: #fff; }
+    h1, h2 { line-height: 1.25; }
+    h1 { margin-top: 0; }
+    h2 { margin-top: 30px; font-size: 1.15rem; }
+    p, li { font-size: 1rem; }
+    a { color: #4f2db8; }
+    .updated { color: #52606d; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Kebijakan Privasi Ludex</h1>
+    <p class="updated">Terakhir diperbarui: 30 September 2026</p>
+    <p>Kebijakan ini menjelaskan bagaimana Jeremy Revaldo ("kami") menangani informasi pada aplikasi Ludex - Katalog Wishlist Game ("Ludex"). Ludex membantu pengguna menjelajahi katalog game, menyimpan wishlist, dan membuat rating serta ulasan.</p>
+
+    <h2>Informasi yang disimpan Ludex</h2>
+    <p>Ludex menyediakan akun lokal untuk membedakan profil pada satu instalasi aplikasi. Informasi berikut disimpan di penyimpanan aplikasi pada perangkat, bukan pada server Ludex:</p>
+    <ul>
+      <li>Nama pengguna akun dan tanggal bergabung.</li>
+      <li>Kata sandi dalam bentuk hash dengan salt; kata sandi asli tidak disimpan.</li>
+      <li>Informasi profil yang pengguna isi, seperti nama pengguna dan bio.</li>
+      <li>Rating, catatan ulasan opsional, wishlist, dan riwayat aktivitas game.</li>
+      <li>ID akun lokal yang digunakan untuk memulihkan sesi masuk.</li>
+    </ul>
+    <p>Data akun disimpan menggunakan IndexedDB dan status sesi menggunakan penyimpanan lokal aplikasi. Kami tidak mengoperasikan server akun dan tidak menyinkronkan data ini ke perangkat lain.</p>
+
+    <h2>Visibilitas antar akun di perangkat</h2>
+    <p>Untuk fitur komunitas lokal, akun lain yang dibuat pada instalasi Ludex yang sama dapat melihat nama pengguna, bio, rating, catatan ulasan, dan wishlist. Kata sandi, hash kata sandi, dan riwayat pribadi tidak ditampilkan ke akun lain. Data ini tidak dipublikasikan ke pengguna Ludex pada perangkat lain.</p>
+
+    <h2>Permintaan ke RAWG</h2>
+    <p>Ludex menggunakan RAWG Video Games Database API untuk memuat informasi dan gambar game, pencarian, genre, detail game, serta rekomendasi berdasarkan genre. Saat fitur tersebut digunakan, perangkat mengirim permintaan ke layanan RAWG yang dapat mencakup istilah pencarian, genre atau ID game yang diminta, kunci API aplikasi, alamat IP, dan metadata koneksi standar. RAWG dapat menangani data permintaan sesuai kebijakan dan ketentuannya sendiri. Rating, catatan ulasan, kata sandi, dan data profil lokal tidak dikirim ke RAWG.</p>
+    <p>Ludex versi ini tidak menggunakan iklan atau SDK analitik dan tidak meminta akses ke lokasi, kontak, kamera, atau mikrofon.</p>
+
+    <h2>Pembagian data</h2>
+    <p>Kami tidak menjual data pengguna. Data yang disimpan lokal hanya tersedia di instalasi aplikasi tersebut sebagaimana dijelaskan di atas. Informasi permintaan katalog dibagikan kepada RAWG saat aplikasi meminta data game.</p>
+
+    <h2>Penyimpanan, keamanan, dan penghapusan</h2>
+    <p>Data akun tetap berada di perangkat sampai pengguna menghapus akun melalui Profil &gt; Hapus Akun dan Data, atau sampai data aplikasi dihapus dari pengaturan perangkat maupun aplikasi diuninstal. Penghapusan akun menghapus profil, rating dan ulasan, wishlist, serta riwayat akun tersebut dari database lokal. Data lokal tidak dapat dihapus dari jarak jauh oleh kami karena kami tidak memiliki salinannya di server.</p>
+    <p>Kata sandi diproses menjadi hash menggunakan PBKDF2 dengan salt. Koneksi ke RAWG menggunakan HTTPS. Penyimpanan lokal aplikasi tidak dienkripsi secara terpisah oleh Ludex; lindungi akses ke perangkat Anda.</p>
+    <p>Petunjuk penghapusan tersedia di <a href="/delete-account.html">halaman penghapusan akun dan data</a>. Menghapus seluruh data aplikasi dari pengaturan Android akan menghapus semua akun lokal pada instalasi itu.</p>
+
+    <h2>Privasi anak</h2>
+    <p>Ludex bukan aplikasi yang dirancang khusus untuk anak-anak dan tidak dengan sengaja meminta informasi dari anak-anak.</p>
+
+    <h2>Perubahan kebijakan</h2>
+    <p>Kami dapat memperbarui kebijakan ini apabila fitur atau praktik data Ludex berubah. Versi terbaru akan dipublikasikan pada halaman ini dengan tanggal pembaruan.</p>
+
+    <h2>Kontak</h2>
+    <p>Untuk pertanyaan privasi atau bantuan terkait penghapusan data, hubungi <a href="mailto:jeremyrevaldo0000@gmail.com">jeremyrevaldo0000@gmail.com</a>.</p>
+  </main>
+</body>
+</html>

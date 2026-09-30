@@ -105,10 +105,17 @@ export const useUserStore = defineStore('user', () => {
     profile.value = null
   }
 
+  async function deleteAccount() {
+    const accountId = account.value?.account_id
+    if (!accountId) throw new Error('Tidak ada akun yang sedang masuk.')
+    await accountDB.delete(accountId)
+    await logout()
+  }
+
   async function saveProfile(updates: Partial<UserProfile>) {
     await profileDB.save(updates)
     profile.value = await profileDB.get()
   }
 
-  return { account, profile, loading, isAuthenticated, restoreSession, register, login, logout, saveProfile }
+  return { account, profile, loading, isAuthenticated, restoreSession, register, login, logout, deleteAccount, saveProfile }
 })
